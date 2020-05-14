@@ -14,7 +14,7 @@ setup(
     install_requires=['ffmpeg_python', 'av', 'numpy', 'matplotlib', 'pandas', 'ffmpeg'],
     classifiers=[
         "Development Status :: 3 - Alpha",
-        "License :: OSI Approved :: BSD License",
+        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3",
         "Topic :: Utilities"
     ],
