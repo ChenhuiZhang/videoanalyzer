@@ -1,0 +1,6 @@
+ffmpeg_python==0.2.0
+av==8.0.1
+numpy==1.16.2
+matplotlib==3.2.1
+pandas==0.23.3+dfsg
+ffmpeg==1.4

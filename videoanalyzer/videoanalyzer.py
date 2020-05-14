@@ -96,9 +96,9 @@ def plot_bitrate_and_frame(df):
 
     plt.show()
 
-def main(file):
-    plot_bitrate_and_frame(pyav_analyze(file))
+def main():
+    plot_bitrate_and_frame(pyav_analyze(sys.argv[1]))
 
 
 if __name__ == "__main__":
-    main(sys.argv[1])
+    main()
