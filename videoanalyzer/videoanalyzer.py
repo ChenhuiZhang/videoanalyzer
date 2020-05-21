@@ -1,3 +1,11 @@
+"""This scrip will analyze the video file and plot the frame size with avrage
+bitrate, and also will show the frames interval which can help to check if
+there is frame dropped.
+We have two backend to do the anlayze: pyav and ffmpeg. PyAV is quick but may
+have problem with some video files. ffmpeg(ffprobe) has a good compatibility
+but take a longer time.
+"""
+
 import sys
 import av
 import matplotlib.pyplot as plt
@@ -15,42 +23,45 @@ frame_type_color = {
     'B': 'blue'
 }
 
+class PYAV:
+    def __init__(self, file):
+        with av.open(file) as container:
+            container.streams.video[0].thread_type = 'AUTO'
 
-def pyav_analyze(video):
-    with av.open(video) as container:
-        container.streams.video[0].thread_type = 'AUTO'
+            video = container.streams.video[0]
+            print(f'fps: {video.framerate} = {float(video.framerate)}')
+            print(f'bit: {container.bit_rate}')
 
-        video = container.streams.video[0]
-        print(f'fps: {video.framerate} = {float(video.framerate)}')
-        print(f'bit: {container.bit_rate}')
+            self.fps = float(video.framerate)
+            self.bps = container.bit_rate / 1000 # in kbits
 
-        rows = []
-        pkt_size = []
-        for packet in container.demux(video=0):
-            if packet.size != 0.0:
-                pkt_size.append(packet.size)
-            for frame in packet.decode():
-                rows.append([frame.time, frame.pict_type])
+            rows = []
+            pkt_size = []
+            for packet in container.demux(video=0):
+                if packet.size != 0.0:
+                    pkt_size.append(packet.size)
+                for frame in packet.decode():
+                    rows.append([frame.time, frame.pict_type])
 
-        df = pd.DataFrame(rows, columns=["pkt_pts_time", "pict_type"])
-        df["pkt_size"] = pkt_size
-
-        return (df, video.framerate, container.bit_rate / 1000)
+            self.df = pd.DataFrame(rows, columns=["pkt_pts_time", "pict_type"])
+            self.df["pkt_size"] = pkt_size
 
 
-def ffmpeg_analyze(file):
-    probe = ffmpeg.probe(file,
-                         show_entries="frame=pkt_pts_time,pict_type,pkt_size",
-                         select_streams="v:0")
-    print(probe["streams"][0]["r_frame_rate"])
-    print(probe["format"]["bit_rate"])
+class FFMPEG:
+    def __init__(self, file):
+        probe = ffmpeg.probe(file,
+                             show_entries="frame=pkt_pts_time,pict_type,pkt_size",
+                             select_streams="v:0")
+        print(probe["streams"][0]["r_frame_rate"])
+        print(probe["format"]["bit_rate"])
 
-    df = pd.DataFrame.from_records(probe["frames"])
-    df["pkt_size"] = pd.to_numeric(df["pkt_size"])
-    df["pkt_pts_time"] = pd.to_numeric(df["pkt_pts_time"])
+        fps = probe["streams"][0]["r_frame_rate"].split("/")
+        self.fps = float(fps[0]) / float(fps[1])
+        self.bps = float(probe["format"]["bit_rate"]) / 1000
 
-    fps = probe["streams"][0]["r_frame_rate"].split("/")
-    return (df, float(fps[0])/float(fps[1]), float(probe["format"]["bit_rate"]) / 1000)
+        self.df = pd.DataFrame.from_records(probe["frames"])
+        self.df["pkt_size"] = pd.to_numeric(self.df["pkt_size"])
+        self.df["pkt_pts_time"] = pd.to_numeric(self.df["pkt_pts_time"])
 
 
 def plot_bitrate(df):
@@ -116,9 +127,9 @@ def plot_bitrate_and_frame(df, fps, bps):
 
 
 def main():
-    # df, fps, bps = pyav_analyze(sys.argv[1])
-    df, fps, bps = ffmpeg_analyze(sys.argv[1])
-    plot_bitrate_and_frame(df, fps, bps)
+    obj = PYAV(sys.argv[1])
+    # obj = FFMPEG(sys.argv[1])
+    plot_bitrate_and_frame(obj.df, obj.fps, obj.bps)
 
 
 if __name__ == "__main__":
