@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="videoanalyzer",
-    version="0.0.1",
+    version="0.1.0",
     author="Hermes Zhang",
     author_email="zhangchenhui2006@gmail.com",
     packages=find_packages(),
